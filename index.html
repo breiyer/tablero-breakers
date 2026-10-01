@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tablero de Breakers</title>
+<style>
+  :root {
+    --bg: #0f1420;
+    --accent: #4da3ff;
+    --accent-2: #ffb347;
+    --text: #e8eef7;
+    --border: #30405f;
+    --shadow: rgba(0, 0, 0, 0.45);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 20% 0%, #1b2538, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  /* ================= Imagen real ================= */
+  .photo-wrap {
+    position: relative;
+    max-width: 560px;
+    width: 100%;
+    border-radius: 14px;
+    /* overflow: hidden; */
+    box-shadow: 0 10px 40px var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .photo-wrap img { display: block; width: 100%; height: auto; }
+
+  /* Etiqueta flotante sobre la foto.
+     Se ancla por su borde INTERIOR (el que mira al punto) y se centra
+     verticalmente, de modo que el texto largo crece solo hacia afuera
+     y nunca tapa el interruptor ni el punto marcador. */
+  .label {
+    position: absolute;
+    transform: translateY(-50%);
+    background: rgba(26, 34, 53, 0.92);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: default;
+    backdrop-filter: blur(3px);
+    box-shadow: 0 3px 10px var(--shadow);
+    transition: transform 0.15s ease, background 0.15s;
+    transform-origin: center;
+    z-index: 2;
+  }
+  /* Columna izquierda: anclada por su borde derecho -> crece hacia la izquierda */
+  .label.left { transform-origin: right center; }
+  /* Columna derecha: anclada por su borde izquierdo -> crece hacia la derecha */
+  .label.right { transform-origin: left center; }
+
+  .label:hover {
+    transform: translateY(-50%) scale(1.08);
+    background: var(--accent);
+    color: #06182e;
+    z-index: 5;
+  }
+  .label .num {
+    display: inline-block;
+    background: var(--accent-2);
+    color: #3a2600;
+    border-radius: 50%;
+    width: 17px;
+    height: 17px;
+    line-height: 17px;
+    text-align: center;
+    font-size: 0.68rem;
+    margin-right: 5px;
+  }
+  /* Punto marcador del breaker */
+  .marker {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    border: 2px solid #fff;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 3px rgba(255, 179, 71, 0.3);
+    z-index: 1;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+  <div class="photo-wrap" id="photoWrap">
+    <img src="brekers.jpg" alt="Tablero de breakers real" />
+    <!-- marcadores y etiquetas se inyectan por JS -->
+  </div>
+
+<script>
+/* ----------------------------------------------------------
+   Datos de los 8 breakers.
+   - pos: posición en % sobre la FOTO (x, y) para la etiqueta.
+   - side: 'L' columna izquierda, 'R' columna derecha.
+   Nombres de zona aleatorios: edítalos aquí mismo.
+---------------------------------------------------------- */
+const BREAKERS = [
+  { id: 1, zone: "Aire Breiyer",            pos: { x: 31, y: 37 }, side: "L" },
+  { id: 2, zone: "Aire Breiyer",    pos: { x: 31, y: 45 }, side: "L" },
+  { id: 3, zone: "Aire Ludis",           pos: { x: 31, y: 53 }, side: "L" },
+  { id: 4, zone: "Nevera",      pos: { x: 64, y: 37 }, side: "R" },
+  { id: 5, zone: "Cocina",      pos: { x: 64, y: 55 }, side: "R" },
+  { id: 6, zone: "Patio labores",              pos: { x: 64, y: 62 }, side: "R" },
+  { id: 7, zone: "Toma de la sala",  pos: { x: 64, y: 69 }, side: "R" },
+  { id: 8, zone: "Luces habitaciones \n Ludis y Breiyer",            pos: { x: 64, y: 76 }, side: "R" },
+];
+
+function renderPhotoLabels() {
+  const wrap = document.getElementById("photoWrap");
+  wrap.querySelectorAll(".label, .marker").forEach(e => e.remove());
+
+  BREAKERS.forEach(b => {
+    const marker = document.createElement("div");
+    marker.className = "marker";
+    marker.style.left = b.pos.x + "%";
+    marker.style.top = b.pos.y + "%";
+    wrap.appendChild(marker);
+
+    const label = document.createElement("div");
+    label.className = "label " + (b.side === "L" ? "left" : "right");
+    // Separación horizontal entre el punto y la etiqueta (en % del ancho).
+    const GAP = 2.5;
+    if (b.side === "L") {
+      // Anclar por el borde derecho: la etiqueta termina a la izquierda del punto
+      // y crece hacia la izquierda al alargarse el texto.
+      label.style.right = (100 - b.pos.x + GAP) + "%";
+    } else {
+      // Anclar por el borde izquierdo: la etiqueta empieza a la derecha del punto
+      // y crece hacia la derecha.
+      label.style.left = (b.pos.x + GAP) + "%";
+    }
+    label.style.top = b.pos.y + "%";
+    label.innerHTML = `<span class="num">${b.id}</span>${escapeHtml(b.zone)}`;
+    label.title = "Breaker " + b.id + " — " + b.zone;
+    wrap.appendChild(label);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+renderPhotoLabels();
+</script>
+</body>
+</html>
